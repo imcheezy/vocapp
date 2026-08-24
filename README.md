@@ -56,8 +56,8 @@ or `DEFINITIONS` tables in `tools/build-data.py`, so they survive a rebuild.
 
 ## Status
 
-Slice 3 of 8: a full 20-card session from HSK 1 — reveal, grade yourself,
-and see a summary of what you missed.
+Slice 4 of 8: choose your levels (HSK 1–4) and direction (中 → EN, EN → 中,
+or mixed), study a 20-card session, grade yourself, and see what you missed.
 
 Word order within a session puts content words before grammar words. The
 most frequent Chinese words are overwhelmingly grammatical (的, 了, 着), and
@@ -65,4 +65,9 @@ those make poor flashcards: their meaning is a grammatical function rather
 than a thing, so self-grading has no clean answer. This is a teaching policy
 and lives in `app.js`, not in the word data.
 
-Level selection, saved progress and spaced repetition are still to come.
+**Known rough edge:** on EN → 中 cards the prompt is the full dictionary
+definition, which for grammar-heavy words can be a mouthful. Shortening the
+prompt to its first sense is queued for the polish slice.
+
+Saved progress and spaced repetition are still to come — nothing survives
+closing the tab yet.

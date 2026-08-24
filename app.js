@@ -1,7 +1,7 @@
 /* ==========================================================================
    生词 — behaviour
 
-   Slice 3: grade each card, then see how the session went.
+   Slice 4: choose your levels and direction, then study.
 
    ---------------------------------------------------------------------------
    WHY THE WORD LISTS ARE .js FILES AND NOT .json
@@ -28,8 +28,8 @@
 /* --------------------------------------------------------------------------
    CONFIGURATION
    -------------------------------------------------------------------------- */
-const SESSION_SIZE = 20;   // cards per session
-const LEVELS = [1];        // which HSK levels to draw from (Slice 4 makes this a choice)
+const SESSION_SIZE = 20;              // cards per session
+const ALL_LEVELS   = [1, 2, 3, 4];
 
 /* Grammar words are taught after content words.
 
@@ -48,15 +48,20 @@ const FUNCTION_POS = ['particle', 'preposition', 'conjunction'];
 /* --------------------------------------------------------------------------
    ELEMENTS
    -------------------------------------------------------------------------- */
+const levelsBox    = document.getElementById('levels');
+const directionBox = document.getElementById('direction');
+const statWords    = document.getElementById('statWords');
+const startBtn     = document.getElementById('startBtn');
+
 const card         = document.getElementById('card');
 const frontHanzi   = document.getElementById('frontHanzi');
+const frontPrompt  = document.getElementById('frontPrompt');
 const backHanzi    = document.getElementById('backHanzi');
 const backPinyin   = document.getElementById('backPinyin');
 const backEnglish  = document.getElementById('backEnglish');
 const backPos      = document.getElementById('backPos');
 const hint         = document.getElementById('hint');
 const progressFill = document.getElementById('progressFill');
-
 const missedBtn    = document.getElementById('missedBtn');
 const gotBtn       = document.getElementById('gotBtn');
 
@@ -66,48 +71,95 @@ const scoreFill    = document.getElementById('scoreFill');
 const missedCount  = document.getElementById('missedCount');
 const missedList   = document.getElementById('missedList');
 const againBtn     = document.getElementById('againBtn');
+const homeBtn      = document.getElementById('homeBtn');
 
 /* --------------------------------------------------------------------------
    THE STATE
 
-   Still one object, still the only place the app stores what is true.
-   Two things are new: which screen we're on, and what happened to each card.
+   Two groups now, and the split is deliberate.
 
-   `results` is deliberately NOT stored inside the deck. A card is a word; a
-   result is something that happened to a word during one session. Keeping
-   them apart is the same instinct as keeping the word list separate from your
-   long-term progress — which is exactly what Slice 5 will need.
+   `settings` is what YOU chose. It outlives any one session, and in Slice 5
+   it becomes the first thing saved to your browser.
+
+   Everything below it describes the session happening right now, and is
+   thrown away when you go back to Home.
+
+   Keeping them apart means "start another session" resets one group and
+   leaves the other alone — no need to carefully remember which fields to
+   preserve.
    -------------------------------------------------------------------------- */
 const state = {
-  screen: 'study',   // 'study' | 'summary'
-  deck: [],          // the words in this session, in order
+  screen: 'home',                                // 'home' | 'study' | 'summary'
+  settings: { levels: [1], direction: 'cn2en' }, // your choices
+
+  deck: [],          // cards in this session
   index: 0,          // which one we're on
   revealed: false,   // is the answer showing?
-  results: [],       // one entry per graded card: { word, correct }
+  results: [],       // one entry per graded card
 };
 
 /* --------------------------------------------------------------------------
-   BUILDING THE DECK
+   READING THE FORM
+
+   The checkboxes and radios ARE the interface — we don't mirror their state
+   anywhere. When something changes, we ask the form what it says and copy
+   that into settings. One source of truth, as ever.
    -------------------------------------------------------------------------- */
-function buildDeck() {
+function readSettings() {
+  const checked = levelsBox.querySelectorAll('input:checked');
+  state.settings.levels = Array.from(checked).map(function (input) {
+    return Number(input.value);
+  });
+
+  const direction = directionBox.querySelector('input:checked');
+  state.settings.direction = direction ? direction.value : 'cn2en';
+}
+
+function wordsForLevels(levels) {
   let pool = [];
-  for (const level of LEVELS) {
+  for (const level of levels) {
     const words = window.HSK && window.HSK[level];
     if (words) {
       pool = pool.concat(words);
     }
   }
+  return pool;
+}
 
-  // Most common first. (Each level arrives sorted, but once several levels are
-  // combined in Slice 4 they need sorting as one pool.)
+/* --------------------------------------------------------------------------
+   BUILDING THE DECK
+
+   A card is no longer just a word — it is a word PLUS the direction you are
+   being tested in. Recognising 喜欢 and producing it from "to like" are two
+   different things to know, so they are two different cards.
+
+   This shape matters beyond today: Slice 5 stores your progress under
+   "word id + direction", so the deck already carries exactly what it needs.
+   -------------------------------------------------------------------------- */
+function buildDeck() {
+  const pool = wordsForLevels(state.settings.levels);
+
+  // Most common first, across every selected level as one pool.
   pool.sort(function (a, b) { return a.freq - b.freq; });
 
-  // Content words first, grammar words after — see FUNCTION_POS above.
+  // Content words before grammar words — see FUNCTION_POS above.
   const isGrammar = function (word) { return FUNCTION_POS.includes(word.pos); };
-  const content = pool.filter(function (w) { return !isGrammar(w); });
-  const grammar = pool.filter(isGrammar);
+  const ordered = pool.filter(function (w) { return !isGrammar(w); })
+                      .concat(pool.filter(isGrammar));
 
-  return content.concat(grammar).slice(0, SESSION_SIZE);
+  return ordered.slice(0, SESSION_SIZE).map(function (word) {
+    return { word: word, direction: directionFor() };
+  });
+}
+
+/* "Mixed" is decided per card, once, when the deck is built — not each time
+   the card renders. Deciding at render time would let a card flip direction
+   under you the moment anything else redrew the screen. */
+function directionFor() {
+  if (state.settings.direction === 'mixed') {
+    return Math.random() < 0.5 ? 'cn2en' : 'en2cn';
+  }
+  return state.settings.direction;
 }
 
 /* --------------------------------------------------------------------------
@@ -118,26 +170,44 @@ function buildDeck() {
 
        change state  ->  call render()
 
-   As the app grew a second screen, render() split into two helpers rather
-   than becoming one long function with a big if. Same principle, one more
-   level: each helper owns one screen, and neither knows the other exists.
+   One helper per screen. Each owns its own screen and none of them knows the
+   others exist.
    -------------------------------------------------------------------------- */
 function render() {
+  document.body.classList.toggle('screen-home',    state.screen === 'home');
   document.body.classList.toggle('screen-study',   state.screen === 'study');
   document.body.classList.toggle('screen-summary', state.screen === 'summary');
 
-  if (state.screen === 'study') {
-    renderStudy();
-  } else {
-    renderSummary();
-  }
+  if (state.screen === 'home')    renderHome();
+  if (state.screen === 'study')   renderStudy();
+  if (state.screen === 'summary') renderSummary();
+}
+
+function renderHome() {
+  const available = wordsForLevels(state.settings.levels).length;
+
+  // toLocaleString puts the thousands separator in: 3181 -> "3,181"
+  statWords.textContent = available.toLocaleString();
+
+  // You cannot study nothing. Say why the button is dead rather than leaving
+  // someone to poke at it.
+  const none = state.settings.levels.length === 0;
+  document.body.classList.toggle('no-levels', none);
+  startBtn.disabled = none;
 }
 
 function renderStudy() {
-  const word = state.deck[state.index];
-  if (!word) return;
+  const item = state.deck[state.index];
+  if (!item) return;
 
-  frontHanzi.textContent = word.hanzi;
+  const word = item.word;
+  const askingForChinese = item.direction === 'en2cn';
+
+  // Which prompt this card shows, and how the back is laid out.
+  document.body.classList.toggle('dir-en2cn', askingForChinese);
+
+  frontHanzi.textContent  = word.hanzi;    // shown on 中 → EN
+  frontPrompt.textContent = word.english;  // shown on EN → 中
 
   backHanzi.textContent   = word.hanzi;
   backPinyin.textContent  = word.pinyin;
@@ -153,9 +223,11 @@ function renderStudy() {
   // work finished, not work looked at.
   progressFill.style.width = (state.index / state.deck.length * 100) + '%';
 
+  const position = `Card ${state.index + 1} of ${state.deck.length}`;
+  const prompt = askingForChinese ? word.english : word.hanzi;
   card.setAttribute('aria-label', state.revealed
-    ? `${word.hanzi}, ${word.pinyin}, ${word.english}. Card ${state.index + 1} of ${state.deck.length}. Grade it below, or tap to hide the answer.`
-    : `Card ${state.index + 1} of ${state.deck.length}. Tap to reveal the answer.`);
+    ? `${word.hanzi}, ${word.pinyin}, ${word.english}. ${position}. Grade it below, or tap to hide the answer.`
+    : `${prompt}. ${position}. Tap to reveal the answer.`);
 }
 
 function renderSummary() {
@@ -175,7 +247,6 @@ function renderSummary() {
   // Rebuild the list from scratch. Cheap at this size, and it means the list
   // can never hold a stale row left over from a previous session.
   missedList.replaceChildren();
-
   for (const result of missed) {
     missedList.appendChild(missedRow(result.word));
   }
@@ -217,17 +288,17 @@ function missedRow(word) {
    -------------------------------------------------------------------------- */
 
 /* Tapping the card flips it either way — so you can hide the answer again to
-   take another look at the character before grading yourself. */
+   take another look before grading yourself. */
 function toggleReveal() {
   state.revealed = !state.revealed;
   render();
 }
 
 function grade(correct) {
-  const word = state.deck[state.index];
-  if (!word) return;
+  const item = state.deck[state.index];
+  if (!item) return;
 
-  state.results.push({ word: word, correct: correct });
+  state.results.push({ word: item.word, direction: item.direction, correct: correct });
   state.index += 1;
   state.revealed = false;
 
@@ -238,40 +309,66 @@ function grade(correct) {
   render();
 }
 
-card.addEventListener('click', toggleReveal);
-missedBtn.addEventListener('click', function () { grade(false); });
-gotBtn.addEventListener('click', function () { grade(true); });
-againBtn.addEventListener('click', start);
-
-/* --------------------------------------------------------------------------
-   START
-
-   The guard matters. If a data file fails to load, the deck is empty and the
-   app would sit there blank with no explanation. Saying so plainly beats a
-   silent white screen — you would have no way to tell a bug from a slow
-   connection.
-   -------------------------------------------------------------------------- */
-function start() {
-  state.screen = 'study';
+function startSession() {
   state.deck = buildDeck();
   state.index = 0;
   state.revealed = false;
   state.results = [];
 
   if (state.deck.length === 0) {
-    frontHanzi.textContent = '⚠';
-    hint.textContent = 'Word lists failed to load — check the data/ folder.';
+    goHome();
     return;
   }
 
+  state.screen = 'study';
   render();
 }
 
-start();
+function goHome() {
+  state.screen = 'home';
+  state.revealed = false;
+  document.body.classList.remove('is-revealed', 'dir-en2cn');
+  render();
+}
+
+/* One listener on the container rather than eight on the inputs. The event
+   travels up from whichever input changed, so this keeps working if levels
+   are ever added or removed. */
+levelsBox.addEventListener('change', function () { readSettings(); render(); });
+directionBox.addEventListener('change', readSettings);
+
+startBtn.addEventListener('click', startSession);
+card.addEventListener('click', toggleReveal);
+missedBtn.addEventListener('click', function () { grade(false); });
+gotBtn.addEventListener('click', function () { grade(true); });
+againBtn.addEventListener('click', startSession);
+homeBtn.addEventListener('click', goHome);
+
+/* --------------------------------------------------------------------------
+   START
+
+   The guard matters. If a data file fails to load, there is nothing to study
+   and the app would sit there looking merely empty. Saying so plainly beats a
+   silent blank screen — you would have no way to tell a bug from a slow
+   connection.
+   -------------------------------------------------------------------------- */
+function boot() {
+  if (!window.HSK || Object.keys(window.HSK).length === 0) {
+    statWords.textContent = '⚠';
+    startBtn.disabled = true;
+    document.body.classList.add('screen-home');
+    return;
+  }
+
+  readSettings();
+  goHome();
+}
+
+boot();
 
 /* --------------------------------------------------------------------------
    NOT YET BUILT:
-   Levels and direction are fixed (Slice 4). Nothing is remembered when you
-   close the tab (Slice 5). Every session starts from the same 20 words
-   because there is no scheduling yet (Slice 6).
+   Nothing is remembered when you close the tab — your levels, your direction
+   and everything you have learned reset (Slice 5). Every session starts from
+   the same words because there is no scheduling yet (Slice 6).
    -------------------------------------------------------------------------- */

@@ -17,11 +17,93 @@
   <main class="screen">
 
     <!--
-      The app now has two screens. Both live in the page at all times; CSS
-      shows one and hides the other based on a class on <body>. There is no
-      page navigation and no framework — a "screen" is just a section that
-      happens to be visible.
+      Three screens now. All three live in the page at all times; CSS shows one
+      and hides the others based on a class on <body>. There is no page
+      navigation and no framework — a "screen" is a section that is visible.
     -->
+
+    <!-- ==================== HOME ==================== -->
+    <section class="view view--home">
+
+      <header class="brand">
+        <h1 class="brand__name">生词</h1>
+        <p class="brand__sub">HSK 3.0 vocabulary</p>
+      </header>
+
+      <p class="stat">
+        <span class="stat__n" id="statWords">0</span>
+        <span class="stat__label">words selected</span>
+      </p>
+
+      <p class="eyebrow">LEVELS</p>
+
+      <!--
+        Real <input type="checkbox"> elements inside <label>s, not styled divs.
+        Same lesson as the card being a <button> in Slice 1: the native element
+        already knows how to be focused, toggled with the keyboard, and
+        announced correctly. The inputs are visually hidden but still present,
+        so all of that keeps working — CSS just draws a nicer box on top.
+      -->
+      <div class="levels" id="levels">
+
+        <label class="level">
+          <input type="checkbox" name="level" value="1" checked>
+          <span class="level__box"><svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+          <span class="level__name">HSK 1</span>
+          <span class="level__count">506</span>
+        </label>
+
+        <label class="level">
+          <input type="checkbox" name="level" value="2">
+          <span class="level__box"><svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+          <span class="level__name">HSK 2</span>
+          <span class="level__count">750</span>
+        </label>
+
+        <label class="level">
+          <input type="checkbox" name="level" value="3">
+          <span class="level__box"><svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+          <span class="level__name">HSK 3</span>
+          <span class="level__count">953</span>
+        </label>
+
+        <label class="level">
+          <input type="checkbox" name="level" value="4">
+          <span class="level__box"><svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+          <span class="level__name">HSK 4</span>
+          <span class="level__count">972</span>
+        </label>
+
+      </div>
+
+      <p class="eyebrow">DIRECTION</p>
+
+      <!-- Radio buttons, for the same reason: only one can be chosen, and
+           arrow keys move between them without a line of JavaScript. -->
+      <div class="segmented" id="direction" role="radiogroup" aria-label="Study direction">
+        <label class="seg">
+          <input type="radio" name="direction" value="cn2en" checked>
+          <span class="seg__label">中 → EN</span>
+        </label>
+        <label class="seg">
+          <input type="radio" name="direction" value="en2cn">
+          <span class="seg__label">EN → 中</span>
+        </label>
+        <label class="seg">
+          <input type="radio" name="direction" value="mixed">
+          <span class="seg__label">Mixed</span>
+        </label>
+      </div>
+
+      <div class="spacer"></div>
+
+      <p class="warn" id="noLevels">Choose at least one level.</p>
+
+      <button class="btn btn--primary" id="startBtn" type="button">
+        Start <span class="btn__sub">20 cards</span>
+      </button>
+
+    </section>
 
     <!-- ==================== STUDY ==================== -->
     <section class="view view--study">
@@ -32,18 +114,13 @@
         <div class="progress__fill" id="progressFill"></div>
       </div>
 
-      <!--
-        The card is a <button>, not a <div>.
-        That single choice gives us, for free: keyboard focus, Enter/Space
-        activation, and correct announcement by screen readers. A <div> would
-        need all of that written by hand, and it usually never gets written.
-      -->
       <button class="card" id="card" type="button">
 
-        <!-- FRONT: the character alone. No pinyin — that was a deliberate choice.
-             These elements start empty; app.js fills them from the word list. -->
+        <!-- FRONT: the prompt. Which of these two shows depends on the
+             direction of this card — see the dir- classes in style.css. -->
         <div class="card__face card__face--front">
           <div class="hanzi" id="frontHanzi"></div>
+          <div class="prompt" id="frontPrompt"></div>
         </div>
 
         <!-- BACK: the answer. -->
@@ -57,11 +134,6 @@
 
       </button>
 
-      <!--
-        The tray holds whatever belongs under the card: a hint before the flip,
-        the two grading buttons after it. Both live here so the card above
-        never changes height when they swap.
-      -->
       <div class="tray">
         <p class="hint" id="hint">tap to reveal</p>
 
@@ -106,7 +178,10 @@
 
       <div class="spacer"></div>
 
-      <button class="btn btn--primary" id="againBtn" type="button">Study again</button>
+      <div class="actions">
+        <button class="btn btn--primary" id="againBtn" type="button">Study again</button>
+        <button class="btn btn--ghost" id="homeBtn" type="button">Home</button>
+      </div>
 
     </section>
 
