@@ -199,6 +199,7 @@ const statStudied  = document.getElementById('statStudied');
 const statDue      = document.getElementById('statDue');
 const homeNote     = document.getElementById('homeNote');
 const startSub     = document.getElementById('startSub');
+const resetBtn     = document.getElementById('resetBtn');
 const startBtn     = document.getElementById('startBtn');
 
 const card         = document.getElementById('card');
@@ -463,6 +464,35 @@ function renderHome() {
   homeNote.textContent = note;
   document.body.classList.toggle('cannot-start', note !== '');
   startBtn.disabled = note !== '';
+
+  // Nothing to reset when nothing has been learned.
+  resetBtn.hidden = Object.keys(state.progress).length === 0;
+}
+
+/* Shorten a definition down to a usable prompt for EN → 中 cards.
+
+   Upstream definitions are semicolon-separated lists of senses, and the whole
+   list makes an unwieldy question: asking you to produce the Chinese for
+   "of; ~'s (possessive particle); (used after an attribute)" is not a
+   flashcard, it is an essay. So take the first sense, plus a second only if
+   the first is very short ("I" alone is too thin a clue; "I; me" is fair).
+
+   If the first sense is nothing but a parenthetical note, the shortened form
+   would carry no meaning at all — so keep the original in that case. Grammar
+   words are simply hard in this direction; a bad prompt is better than an
+   empty one. */
+function promptText(english) {
+  const senses = english.split(';').map(function (part) { return part.trim(); })
+                        .filter(Boolean);
+  if (senses.length === 0) return english;
+
+  const first = senses[0];
+  if (first.startsWith('(') && first.endsWith(')')) return english;
+
+  if (first.length < 15 && senses.length > 1) {
+    return first + '; ' + senses[1];
+  }
+  return first;
 }
 
 /* Say what the session is, rather than always claiming "20 cards". */
@@ -484,7 +514,7 @@ function renderStudy() {
   document.body.classList.toggle('dir-en2cn', askingForChinese);
 
   frontHanzi.textContent  = word.hanzi;    // shown on 中 → EN
-  frontPrompt.textContent = word.english;  // shown on EN → 中
+  frontPrompt.textContent = promptText(word.english);  // shown on EN → 中
 
   backHanzi.textContent   = word.hanzi;
   backPinyin.textContent  = word.pinyin;
@@ -617,6 +647,61 @@ function goHome() {
 /* One listener on the container rather than eight on the inputs. The event
    travels up from whichever input changed, so this keeps working if levels
    are ever added or removed. */
+/* Erasing months of study is not something to do on a stray click, so it is
+   confirmed first and the message says exactly how much is at stake. */
+function resetProgress() {
+  const count = Object.keys(state.progress).length;
+  if (count === 0) return;
+
+  const message = 'Erase all study progress?\n\n'
+    + count + ' card record' + (count === 1 ? '' : 's')
+    + ' will be deleted. This cannot be undone.';
+
+  if (!window.confirm(message)) return;
+
+  state.progress = {};
+  saveProgress();
+  render();
+}
+
+/* --------------------------------------------------------------------------
+   KEYBOARD
+
+   Studying at a desk is much faster without reaching for the mouse every
+   card. One listener on the document, active only while studying.
+   -------------------------------------------------------------------------- */
+document.addEventListener('keydown', function (event) {
+  if (state.screen !== 'study') return;
+
+  // Leave browser and OS shortcuts alone.
+  if (event.metaKey || event.ctrlKey || event.altKey) return;
+
+  const key = event.key;
+  const onButton = event.target && event.target.tagName === 'BUTTON';
+
+  if (key === ' ' || key === 'Enter') {
+    // Space and Enter on a focused button are that button's own job. Handling
+    // them here too would flip the card twice — once for our listener, once
+    // for the browser's built-in button activation.
+    if (onButton) return;
+
+    event.preventDefault();   // stop Space from scrolling the page
+    toggleReveal();
+    return;
+  }
+
+  // Grading a card you have not looked at yet would just be cheating.
+  if (!state.revealed) return;
+
+  if (key === 'ArrowLeft' || key === '1') {
+    event.preventDefault();
+    grade(false);
+  } else if (key === 'ArrowRight' || key === '2') {
+    event.preventDefault();
+    grade(true);
+  }
+});
+
 levelsBox.addEventListener('change', function () { readSettings(); render(); });
 directionBox.addEventListener('change', readSettings);
 
@@ -626,6 +711,7 @@ missedBtn.addEventListener('click', function () { grade(false); });
 gotBtn.addEventListener('click', function () { grade(true); });
 againBtn.addEventListener('click', startSession);
 homeBtn.addEventListener('click', goHome);
+resetBtn.addEventListener('click', resetProgress);
 
 /* --------------------------------------------------------------------------
    START
@@ -657,7 +743,6 @@ function boot() {
 boot();
 
 /* --------------------------------------------------------------------------
-   STILL TO COME (Slice 7):
-   Keyboard shortcuts, a flip animation, and shorter prompts on EN → 中 cards,
-   where the full dictionary definition can be a mouthful.
+   STILL TO COME (Slice 8):
+   Deployment — putting this at a real URL so it works on a phone.
    -------------------------------------------------------------------------- */

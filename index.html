@@ -109,6 +109,9 @@
         Start <span class="btn__sub" id="startSub">20 cards</span>
       </button>
 
+      <!-- Destructive, so it is deliberately small, quiet, and confirmed. -->
+      <button class="linkish" id="resetBtn" type="button" hidden>Reset all progress</button>
+
     </section>
 
     <!-- ==================== STUDY ==================== -->
@@ -154,6 +157,14 @@
           </button>
         </div>
       </div>
+
+      <!-- Shown only on devices with a real pointer — see style.css. There is
+           no point advertising keyboard shortcuts on a phone. -->
+      <p class="kbd-hint" aria-hidden="true">
+        <kbd>space</kbd> flip <span class="kbd-hint__dot">·</span>
+        <kbd>&larr;</kbd> missed <span class="kbd-hint__dot">·</span>
+        <kbd>&rarr;</kbd> got it
+      </p>
 
     </section>
 

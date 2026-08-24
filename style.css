@@ -486,6 +486,72 @@ body.cannot-start .warn { display: block; }
 }
 
 /* --------------------------------------------------------------------------
+   5c. POLISH
+   -------------------------------------------------------------------------- */
+
+/* The reveal.
+
+   A CSS animation restarts whenever an element goes from display:none back to
+   being displayed — which is exactly what happens when the card flips. So the
+   whole effect is these six lines; no JavaScript is involved in the motion at
+   all. */
+@keyframes faceIn {
+  from { opacity: 0; transform: translateY(7px); }
+  to   { opacity: 1; transform: none; }
+}
+.card__face--front,
+.card__face--back { animation: faceIn 190ms ease-out; }
+
+/* Keyboard shortcuts are worth advertising on a laptop and pure clutter on a
+   phone. (hover: hover) and (pointer: fine) together mean "there is a real
+   pointing device", which is the closest honest proxy for "has a keyboard". */
+.kbd-hint {
+  display: none;
+  flex-shrink: 0;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-faint);
+}
+@media (hover: hover) and (pointer: fine) {
+  body.screen-study .kbd-hint { display: block; }
+}
+.kbd-hint kbd {
+  font-family: inherit;
+  font-size: 11px;
+  padding: 2px 6px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  color: var(--text-dim);
+}
+.kbd-hint__dot { padding: 0 4px; color: var(--line-strong); }
+
+/* A quiet, text-only control for something destructive. Deliberately not a
+   button that looks important. */
+.linkish {
+  flex-shrink: 0;
+  margin-top: 14px;
+  padding: 6px;
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--text-faint);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.linkish:hover { color: var(--warn); }
+.linkish:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Motion is not universally welcome. Some people get motion sickness from it,
+   and the OS setting is how they say so — honouring it is not optional. */
+@media (prefers-reduced-motion: reduce) {
+  .card__face--front,
+  .card__face--back { animation: none; }
+  .progress__fill { transition: none; }
+}
+
+/* --------------------------------------------------------------------------
    6. THE ONE PIECE OF STATE
    JavaScript's entire job in this slice is to add or remove ONE class on
    <body>: `is-revealed`. Everything below is CSS reacting to that fact.
@@ -514,7 +580,16 @@ body.screen-summary .view--summary { display: flex; }
 body.dir-en2cn .card__face--front .hanzi { display: none; }
 body.dir-en2cn .prompt                   { display: block; }
 body.dir-en2cn .card__face--back .hanzi--small { font-size: 96px; }
-body.dir-en2cn #backEnglish              { display: none; }
+
+/* On EN → 中 the prompt is a SHORTENED definition, so the back still shows the
+   full one — quieter, since you have already read the gist. Hiding it (which
+   is what Slice 4 did) meant the complete definition was never visible on
+   these cards at all. */
+body.dir-en2cn #backEnglish {
+  font-size: 14px;
+  color: var(--text-dim);
+  max-width: 30ch;
+}
 
 .prompt {
   font-size: 30px;

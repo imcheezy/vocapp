@@ -54,12 +54,42 @@ development — 个 was nearly shipped as `gě`, and 了 as `liǎo`.
 looks off against your textbook, it probably is. Fixes go in the `OVERRIDES`
 or `DEFINITIONS` tables in `tools/build-data.py`, so they survive a rebuild.
 
+## Keyboard shortcuts
+
+On a laptop, studying is faster without the mouse:
+
+| Key | Does |
+|---|---|
+| `space` | Flip the card |
+| `→` or `2` | Got it |
+| `←` or `1` | Missed it |
+
+Arrow keys only work once the answer is showing — grading a card you have not
+looked at is just cheating.
+
+## Tests
+
+The app itself has no dependencies. The tests do: they drive a real browser.
+
+```
+npm install -D playwright
+node tests/run.mjs
+```
+
+Or run one area at a time, e.g. `node tests/scheduling.test.mjs`.
+
+157 assertions across five files, run over `file://` — the same way the app is
+actually opened, so the tests would catch the class of problem that made the
+word lists `.js` instead of `.json` in the first place.
+
 ## Status
 
-Slice 6 of 8: a working spaced-repetition study tool. Choose your levels
+Slice 7 of 8: a working spaced-repetition study tool. Choose your levels
 (HSK 1–4) and direction (中 → EN, EN → 中, or mixed); each session serves the
 cards that are actually due, tops up with new words, and remembers everything
 between visits.
+
+Only deployment remains.
 
 Word order within a session puts content words before grammar words. The
 most frequent Chinese words are overwhelmingly grammatical (的, 了, 着), and
