@@ -16,56 +16,99 @@
 <body>
   <main class="screen">
 
-    <!-- How far through the session you are. Decorative for screen readers:
-         the card itself announces its own position. -->
-    <div class="progress" aria-hidden="true">
-      <div class="progress__fill" id="progressFill"></div>
-    </div>
-
     <!--
-      The card is a <button>, not a <div>.
-      That single choice gives us, for free: keyboard focus, Enter/Space
-      activation, and correct announcement by screen readers. A <div> would
-      need all of that written by hand, and it usually never gets written.
+      The app now has two screens. Both live in the page at all times; CSS
+      shows one and hides the other based on a class on <body>. There is no
+      page navigation and no framework — a "screen" is just a section that
+      happens to be visible.
     -->
-    <button class="card" id="card" type="button" aria-label="Flashcard, tap to reveal the answer">
 
-      <!-- FRONT: the character alone. No pinyin — that was a deliberate choice.
-           These elements start empty; app.js fills them from the word list. -->
-      <div class="card__face card__face--front">
-        <div class="hanzi" id="frontHanzi"></div>
+    <!-- ==================== STUDY ==================== -->
+    <section class="view view--study">
+
+      <!-- How far through the session you are. Decorative for screen readers:
+           the card itself announces its own position. -->
+      <div class="progress" aria-hidden="true">
+        <div class="progress__fill" id="progressFill"></div>
       </div>
 
-      <!-- BACK: the answer. -->
-      <div class="card__face card__face--back">
-        <div class="hanzi hanzi--small" id="backHanzi"></div>
-        <div class="pinyin" id="backPinyin"></div>
-        <div class="rule"></div>
-        <div class="english" id="backEnglish"></div>
-        <div class="pos" id="backPos"></div>
+      <!--
+        The card is a <button>, not a <div>.
+        That single choice gives us, for free: keyboard focus, Enter/Space
+        activation, and correct announcement by screen readers. A <div> would
+        need all of that written by hand, and it usually never gets written.
+      -->
+      <button class="card" id="card" type="button">
+
+        <!-- FRONT: the character alone. No pinyin — that was a deliberate choice.
+             These elements start empty; app.js fills them from the word list. -->
+        <div class="card__face card__face--front">
+          <div class="hanzi" id="frontHanzi"></div>
+        </div>
+
+        <!-- BACK: the answer. -->
+        <div class="card__face card__face--back">
+          <div class="hanzi hanzi--small" id="backHanzi"></div>
+          <div class="pinyin" id="backPinyin"></div>
+          <div class="rule"></div>
+          <div class="english" id="backEnglish"></div>
+          <div class="pos" id="backPos"></div>
+        </div>
+
+      </button>
+
+      <!--
+        The tray holds whatever belongs under the card: a hint before the flip,
+        the two grading buttons after it. Both live here so the card above
+        never changes height when they swap.
+      -->
+      <div class="tray">
+        <p class="hint" id="hint">tap to reveal</p>
+
+        <div class="grade">
+          <button class="btn btn--missed" id="missedBtn" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            Missed it
+          </button>
+          <button class="btn btn--got" id="gotBtn" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            Got it
+          </button>
+        </div>
       </div>
 
-    </button>
+    </section>
 
-    <!--
-      The tray holds whatever belongs under the card. Before the flip that's a
-      hint; after the flip it's the two grading buttons. Both live here so the
-      card above never changes height when we swap them.
-    -->
-    <div class="tray">
-      <p class="hint" id="hint">tap to reveal</p>
+    <!-- ==================== SUMMARY ==================== -->
+    <section class="view view--summary">
 
-      <div class="grade">
-        <button class="btn btn--missed" type="button">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-          Missed it
-        </button>
-        <button class="btn btn--got" type="button">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
-          Got it
-        </button>
+      <p class="eyebrow">SESSION COMPLETE</p>
+
+      <p class="score">
+        <span class="score__correct" id="scoreCorrect">0</span>
+        <span class="score__total">of <span id="scoreTotal">0</span> correct</span>
+      </p>
+
+      <div class="progress" aria-hidden="true">
+        <div class="progress__fill" id="scoreFill"></div>
       </div>
-    </div>
+
+      <div class="review" id="review">
+        <div class="review__head">
+          <span class="eyebrow">REVIEW THESE</span>
+          <span class="review__count" id="missedCount"></span>
+        </div>
+        <!-- Filled in by app.js. A <ul> because it genuinely is a list. -->
+        <ul class="missed" id="missedList"></ul>
+      </div>
+
+      <p class="perfect" id="perfect">Nothing missed. 很好.</p>
+
+      <div class="spacer"></div>
+
+      <button class="btn btn--primary" id="againBtn" type="button">Study again</button>
+
+    </section>
 
   </main>
 

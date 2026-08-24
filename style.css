@@ -68,11 +68,17 @@ body {
      it ignores the browser's own toolbars and the page ends up too tall. */
   height: 100dvh;
   padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
   max-width: 480px;   /* on a desktop, stay phone-shaped rather than sprawling */
   margin: 0 auto;
+}
+
+/* A "screen" is a section that happens to be visible. Which one shows is
+   decided entirely by a class on <body> — see section 6. */
+.view {
+  height: 100%;
+  flex-direction: column;
+  gap: 16px;
+  display: none;
 }
 
 /* --------------------------------------------------------------------------
@@ -219,6 +225,105 @@ body {
 .btn--got svg { stroke: var(--accent-ink); }
 
 /* --------------------------------------------------------------------------
+   5b. THE SUMMARY SCREEN
+   -------------------------------------------------------------------------- */
+.view--summary { padding-top: 24px; }
+
+.eyebrow {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.13em;
+  color: var(--text-faint);
+}
+
+.score {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.score__correct {
+  font-size: 56px;
+  font-weight: 300;
+  color: var(--accent);
+  line-height: 1;
+}
+.score__total {
+  font-size: 18px;
+  color: var(--text-dim);
+}
+
+.review {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 0;        /* lets the list below scroll instead of overflowing */
+}
+.review__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.review__count { font-size: 12px; color: var(--text-faint); }
+
+.missed {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;     /* a long list scrolls; the buttons below stay put */
+  min-height: 0;
+}
+.missed li {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 13px 4px;
+  border-bottom: 1px solid var(--track);
+}
+.missed li:last-child { border-bottom: none; }
+
+.missed__hanzi {
+  font-family: var(--font-han);
+  font-size: 26px;
+  line-height: 1.2;
+  width: 82px;
+  flex-shrink: 0;
+}
+.missed__gloss { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.missed__pinyin { font-size: 13px; font-weight: 300; color: var(--text-dim); }
+.missed__english {
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--text);
+  /* Wrap to at most two lines rather than truncating on one. A review list
+     whose definitions are cut off mid-word is not a review list. */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
+.perfect {
+  font-size: 16px;
+  color: var(--text-dim);
+  padding: 8px 0;
+}
+
+.spacer { flex-grow: 1; }
+
+.btn--primary {
+  flex-grow: 0;
+  height: 58px;
+  flex-shrink: 0;
+  background: var(--accent);
+  border: none;
+  border-radius: 29px;
+  color: var(--accent-ink);
+  font-size: 17px;
+  font-weight: 600;
+}
+
+/* --------------------------------------------------------------------------
    6. THE ONE PIECE OF STATE
    JavaScript's entire job in this slice is to add or remove ONE class on
    <body>: `is-revealed`. Everything below is CSS reacting to that fact.
@@ -231,7 +336,15 @@ body {
 
 body.is-revealed .card__face--front { display: none; }
 body.is-revealed .card__face--back  { display: flex; }
+body.is-revealed .hint              { display: none; }
+body.is-revealed .grade             { display: flex; }
 
-/* The hint stays visible on both sides now — it just changes what it says.
-   The grading buttons remain hidden until Slice 3 wires up scoring; showing
-   buttons that do nothing would be worse than not showing them. */
+/* Which screen is showing. Same idea, one level up: app.js sets a class,
+   CSS decides what that means. */
+body.screen-study   .view--study   { display: flex; }
+body.screen-summary .view--summary { display: flex; }
+
+/* A perfect score has nothing to review, and an imperfect one has nothing to
+   celebrate. Exactly one of these shows. */
+body.has-misses    .perfect { display: none; }
+body:not(.has-misses) .review { display: none; }

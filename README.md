@@ -56,6 +56,13 @@ or `DEFINITIONS` tables in `tools/build-data.py`, so they survive a rebuild.
 
 ## Status
 
-Slice 2 of 8: flips through a real 20-word session drawn from HSK 1.
-Grading, level selection, saved progress and spaced repetition are still to
-come.
+Slice 3 of 8: a full 20-card session from HSK 1 — reveal, grade yourself,
+and see a summary of what you missed.
+
+Word order within a session puts content words before grammar words. The
+most frequent Chinese words are overwhelmingly grammatical (的, 了, 着), and
+those make poor flashcards: their meaning is a grammatical function rather
+than a thing, so self-grading has no clean answer. This is a teaching policy
+and lives in `app.js`, not in the word data.
+
+Level selection, saved progress and spaced repetition are still to come.
