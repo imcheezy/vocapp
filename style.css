@@ -1,0 +1,216 @@
+/* ==========================================================================
+   生词 — styles
+   CSS is the "adjectives" layer: what things look like. No behaviour here.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. DESIGN TOKENS
+   Every colour in the app is named once, here, and referred to everywhere
+   else as var(--name). Change a value here and it updates app-wide. This is
+   why you never hardcode a colour twice.
+   -------------------------------------------------------------------------- */
+:root {
+  --bg:          #12131a;  /* page — near-black, deliberately not #000 */
+  --surface:     #1c1e27;  /* the card — one step lighter than the page */
+  --text:        #e8e8ed;  /* off-white, not pure white */
+  --text-dim:    #8b8d9a;
+  --text-faint:  #5a5d6a;
+  --line:        #2b2e3a;
+  --accent:      #3fbfa0;  /* jade — the single primary-action colour */
+  --accent-ink:  #12131a;  /* text that sits ON the accent */
+  --warn:        #c9906a;  /* clay — "you missed this" */
+
+  --radius-card: 20px;
+  --radius-ctl:  12px;
+
+  --font-latin: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+  --font-han:   'Noto Sans SC', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+}
+
+/* Dark is the design. Light mode is the courtesy — it only has to be decent. */
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg:         #f4f4f2;
+    --surface:    #ffffff;
+    --text:       #1a1b21;
+    --text-dim:   #6b6d78;
+    --text-faint: #9a9ca6;
+    --line:       #e2e2e0;
+    --accent:     #17836b;
+    --accent-ink: #ffffff;
+    --warn:       #a35f30;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   2. RESET
+   Browsers ship their own opinionated defaults. Clear the few that get in
+   the way, rather than fighting them element by element later.
+   -------------------------------------------------------------------------- */
+* { box-sizing: border-box; }          /* padding counts INSIDE a width, not on top of it */
+body, p, div { margin: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-latin);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;  /* kills the grey flash on phone taps */
+}
+
+/* --------------------------------------------------------------------------
+   3. LAYOUT
+   -------------------------------------------------------------------------- */
+.screen {
+  /* 100dvh = "dynamic viewport height". Plain 100vh is wrong on phones —
+     it ignores the browser's own toolbars and the page ends up too tall. */
+  height: 100dvh;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 480px;   /* on a desktop, stay phone-shaped rather than sprawling */
+  margin: 0 auto;
+}
+
+/* --------------------------------------------------------------------------
+   4. THE CARD
+   -------------------------------------------------------------------------- */
+.card {
+  flex-grow: 1;                  /* take all leftover vertical space */
+  background: var(--surface);
+  border: none;
+  border-radius: var(--radius-card);
+  padding: 28px;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+/* Focus ring for keyboard users only — :focus-visible skips mouse clicks. */
+.card:focus-visible,
+.btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.card__face {
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.hanzi {
+  font-family: var(--font-han);
+  font-size: 96px;
+  /* Weight 400, never bold. Heavy strokes blur together on dense characters
+     like 邊 or 讓 — the whole reason this app exists is to read those. */
+  font-weight: 400;
+  line-height: 1.15;
+  letter-spacing: 0.02em;
+}
+.hanzi--small { font-size: 56px; }
+
+.pinyin {
+  font-size: 22px;
+  font-weight: 300;
+  color: var(--text-dim);
+  letter-spacing: 0.03em;
+}
+
+.rule { width: 44px; height: 1px; background: var(--line); }
+
+.english {
+  font-size: 20px;
+  line-height: 1.5;
+  text-wrap: pretty;   /* avoids a lonely last word on its own line */
+}
+
+.pos {
+  padding: 5px 11px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.09em;
+  color: var(--text-faint);
+}
+
+/* --------------------------------------------------------------------------
+   5. THE TRAY (under the card)
+   Fixed height so the card above never jumps when the contents swap.
+   -------------------------------------------------------------------------- */
+.tray {
+  height: 60px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hint {
+  font-size: 14px;
+  color: var(--text-faint);
+  letter-spacing: 0.06em;
+}
+
+.grade { width: 100%; height: 100%; gap: 12px; }
+
+.btn {
+  flex-basis: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.btn svg {
+  width: 17px; height: 17px;
+  fill: none; stroke-width: 2.3;
+  stroke-linecap: round; stroke-linejoin: round;
+}
+
+/* The two grading buttons differ by SHAPE and WIDTH, not only colour —
+   so they stay distinguishable to a colour-blind user (~1 in 12 men). */
+.btn--missed {
+  flex-grow: 1;
+  background: transparent;
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-ctl);   /* square-ish */
+  color: var(--text);
+}
+.btn--missed svg { stroke: var(--warn); }
+
+.btn--got {
+  flex-grow: 1.55;                    /* visibly wider */
+  background: var(--accent);
+  border: none;
+  border-radius: 30px;                /* pill */
+  color: var(--accent-ink);
+  font-size: 16px;
+  font-weight: 600;
+}
+.btn--got svg { stroke: var(--accent-ink); }
+
+/* --------------------------------------------------------------------------
+   6. THE ONE PIECE OF STATE
+   JavaScript's entire job in this slice is to add or remove ONE class on
+   <body>: `is-revealed`. Everything below is CSS reacting to that fact.
+   Nothing in app.js touches a colour, a size, or a style property.
+   -------------------------------------------------------------------------- */
+.card__face--front { display: flex; }
+.card__face--back  { display: none; }
+.hint              { display: block; }
+.grade             { display: none; }
+
+body.is-revealed .card__face--front { display: none; }
+body.is-revealed .card__face--back  { display: flex; }
+body.is-revealed .hint              { display: none; }
+body.is-revealed .grade             { display: flex; }

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <!-- Tells phones "render at real device width", not zoomed-out desktop width. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>生词 — HSK Flashcards</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=Noto+Sans+SC:wght@300;400;500&display=swap">
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <main class="screen">
+
+    <!--
+      The card is a <button>, not a <div>.
+      That single choice gives us, for free: keyboard focus, Enter/Space
+      activation, and correct announcement by screen readers. A <div> would
+      need all of that written by hand, and it usually never gets written.
+    -->
+    <button class="card" id="card" type="button" aria-label="Flashcard, tap to reveal the answer">
+
+      <!-- FRONT: the character alone. No pinyin — that was a deliberate choice. -->
+      <div class="card__face card__face--front">
+        <div class="hanzi">喜欢</div>
+      </div>
+
+      <!-- BACK: the answer. -->
+      <div class="card__face card__face--back">
+        <div class="hanzi hanzi--small">喜欢</div>
+        <div class="pinyin">xǐhuan</div>
+        <div class="rule"></div>
+        <div class="english">to like; to be fond of</div>
+        <div class="pos">VERB</div>
+      </div>
+
+    </button>
+
+    <!--
+      The tray holds whatever belongs under the card. Before the flip that's a
+      hint; after the flip it's the two grading buttons. Both live here so the
+      card above never changes height when we swap them.
+    -->
+    <div class="tray">
+      <p class="hint">tap to reveal</p>
+
+      <div class="grade">
+        <button class="btn btn--missed" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          Missed it
+        </button>
+        <button class="btn btn--got" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          Got it
+        </button>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Loaded last, so every element above already exists when the script runs. -->
+  <script src="app.js"></script>
+</body>
+</html>
