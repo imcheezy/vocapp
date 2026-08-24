@@ -16,6 +16,7 @@
   --text-dim:    #8b8d9a;
   --text-faint:  #5a5d6a;
   --line:        #2b2e3a;
+  --track:       #23262f;  /* progress bar groove */
   --accent:      #3fbfa0;  /* jade — the single primary-action colour */
   --accent-ink:  #12131a;  /* text that sits ON the accent */
   --warn:        #c9906a;  /* clay — "you missed this" */
@@ -36,6 +37,7 @@
     --text-dim:   #6b6d78;
     --text-faint: #9a9ca6;
     --line:       #e2e2e0;
+    --track:      #e6e6e4;
     --accent:     #17836b;
     --accent-ink: #ffffff;
     --warn:       #a35f30;
@@ -71,6 +73,23 @@ body {
   gap: 16px;
   max-width: 480px;   /* on a desktop, stay phone-shaped rather than sprawling */
   margin: 0 auto;
+}
+
+/* --------------------------------------------------------------------------
+   3b. PROGRESS BAR
+   -------------------------------------------------------------------------- */
+.progress {
+  height: 3px;
+  flex-shrink: 0;            /* never let it get squeezed by the card */
+  background: var(--track);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.progress__fill {
+  height: 100%;
+  width: 0;                  /* app.js sets this as you advance */
+  background: var(--accent);
+  transition: width 180ms ease-out;
 }
 
 /* --------------------------------------------------------------------------
@@ -212,5 +231,7 @@ body {
 
 body.is-revealed .card__face--front { display: none; }
 body.is-revealed .card__face--back  { display: flex; }
-body.is-revealed .hint              { display: none; }
-body.is-revealed .grade             { display: flex; }
+
+/* The hint stays visible on both sides now — it just changes what it says.
+   The grading buttons remain hidden until Slice 3 wires up scoring; showing
+   buttons that do nothing would be worse than not showing them. */

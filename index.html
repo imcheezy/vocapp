@@ -16,6 +16,12 @@
 <body>
   <main class="screen">
 
+    <!-- How far through the session you are. Decorative for screen readers:
+         the card itself announces its own position. -->
+    <div class="progress" aria-hidden="true">
+      <div class="progress__fill" id="progressFill"></div>
+    </div>
+
     <!--
       The card is a <button>, not a <div>.
       That single choice gives us, for free: keyboard focus, Enter/Space
@@ -24,18 +30,19 @@
     -->
     <button class="card" id="card" type="button" aria-label="Flashcard, tap to reveal the answer">
 
-      <!-- FRONT: the character alone. No pinyin — that was a deliberate choice. -->
+      <!-- FRONT: the character alone. No pinyin — that was a deliberate choice.
+           These elements start empty; app.js fills them from the word list. -->
       <div class="card__face card__face--front">
-        <div class="hanzi">喜欢</div>
+        <div class="hanzi" id="frontHanzi"></div>
       </div>
 
       <!-- BACK: the answer. -->
       <div class="card__face card__face--back">
-        <div class="hanzi hanzi--small">喜欢</div>
-        <div class="pinyin">xǐhuan</div>
+        <div class="hanzi hanzi--small" id="backHanzi"></div>
+        <div class="pinyin" id="backPinyin"></div>
         <div class="rule"></div>
-        <div class="english">to like; to be fond of</div>
-        <div class="pos">VERB</div>
+        <div class="english" id="backEnglish"></div>
+        <div class="pos" id="backPos"></div>
       </div>
 
     </button>
@@ -46,7 +53,7 @@
       card above never changes height when we swap them.
     -->
     <div class="tray">
-      <p class="hint">tap to reveal</p>
+      <p class="hint" id="hint">tap to reveal</p>
 
       <div class="grade">
         <button class="btn btn--missed" type="button">
@@ -61,6 +68,16 @@
     </div>
 
   </main>
+
+  <!--
+    The word lists. Plain <script> tags, not fetch() — see the note at the top
+    of app.js for why. Each file adds itself to window.HSK, so app.js finds all
+    four levels already in memory when it starts.
+  -->
+  <script src="data/hsk3-L1.js"></script>
+  <script src="data/hsk3-L2.js"></script>
+  <script src="data/hsk3-L3.js"></script>
+  <script src="data/hsk3-L4.js"></script>
 
   <!-- Loaded last, so every element above already exists when the script runs. -->
   <script src="app.js"></script>
