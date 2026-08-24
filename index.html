@@ -31,7 +31,10 @@
       </header>
 
       <p class="stat">
-        <span class="stat__n" id="statStudied">0</span>
+        <span class="stat__n" id="statDue">0</span>
+        <span class="stat__label">due today</span>
+        <span class="stat__dot">·</span>
+        <span class="stat__n stat__n--quiet" id="statStudied">0</span>
         <span class="stat__label">studied</span>
         <span class="stat__dot">·</span>
         <span class="stat__n stat__n--quiet" id="statWords">0</span>
@@ -100,10 +103,10 @@
 
       <div class="spacer"></div>
 
-      <p class="warn" id="noLevels">Choose at least one level.</p>
+      <p class="warn" id="homeNote"></p>
 
       <button class="btn btn--primary" id="startBtn" type="button">
-        Start <span class="btn__sub">20 cards</span>
+        Start <span class="btn__sub" id="startSub">20 cards</span>
       </button>
 
     </section>

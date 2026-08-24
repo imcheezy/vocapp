@@ -56,9 +56,10 @@ or `DEFINITIONS` tables in `tools/build-data.py`, so they survive a rebuild.
 
 ## Status
 
-Slice 5 of 8: choose your levels (HSK 1–4) and direction (中 → EN, EN → 中,
-or mixed), study a 20-card session, grade yourself, see what you missed —
-and everything is remembered when you come back.
+Slice 6 of 8: a working spaced-repetition study tool. Choose your levels
+(HSK 1–4) and direction (中 → EN, EN → 中, or mixed); each session serves the
+cards that are actually due, tops up with new words, and remembers everything
+between visits.
 
 Word order within a session puts content words before grammar words. The
 most frequent Chinese words are overwhelmingly grammatical (的, 了, 着), and
@@ -90,5 +91,28 @@ underneath a saved session and asserts every record survives untouched.
 
 Clearing your browser's site data for this page will erase your progress.
 
-Spaced repetition is still to come: each card's box and due date are being
-recorded, but sessions do not yet schedule by them.
+## How scheduling works
+
+Every card sits in a numbered box. Answer correctly and it moves up, and you
+see it less often. Answer wrong and it drops straight back to box 1.
+
+| Box | Next review |
+|---|---|
+| 1 | tomorrow |
+| 2 | 3 days |
+| 3 | 7 days |
+| 4 | 21 days |
+| 5 | 60 days |
+
+A session takes the most overdue cards first — among equally overdue cards,
+the ones in the lowest box, since those are closest to being forgotten — then
+fills the remaining space with new words. Reviews always come before new
+material: forgetting something you already paid to learn costs more than
+learning one fewer new word today.
+
+Cards that are not due yet are skipped entirely. That is the point — not
+seeing a card you already know is the whole saving.
+
+Because progress is tracked per direction, a word can be due 中 → EN while
+still resting EN → 中. That is intentional: you can lose the ability to
+produce a word while still recognising it.

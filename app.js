@@ -196,6 +196,9 @@ const levelsBox    = document.getElementById('levels');
 const directionBox = document.getElementById('direction');
 const statWords    = document.getElementById('statWords');
 const statStudied  = document.getElementById('statStudied');
+const statDue      = document.getElementById('statDue');
+const homeNote     = document.getElementById('homeNote');
+const startSub     = document.getElementById('startSub');
 const startBtn     = document.getElementById('startBtn');
 
 const card         = document.getElementById('card');
@@ -293,39 +296,109 @@ function wordsForLevels(levels) {
 }
 
 /* --------------------------------------------------------------------------
-   BUILDING THE DECK
+   CHOOSING WHAT TO STUDY  (spaced repetition)
 
-   A card is no longer just a word — it is a word PLUS the direction you are
-   being tested in. Recognising 喜欢 and producing it from "to like" are two
-   different things to know, so they are two different cards.
+   Until now a session was "the first 20 words in the list", which meant
+   studying the same words forever no matter what you already knew.
 
-   This shape matters beyond today: Slice 5 stores your progress under
-   "word id + direction", so the deck already carries exactly what it needs.
+   Now every candidate card falls into one of three groups:
+
+     DUE     — studied before, and its next-review date has arrived
+     WAITING — studied before, not due yet. Skipped entirely. This is the
+               whole point: not seeing a card you know is the saving.
+     NEW     — never studied in this direction
+
+   A session takes the most overdue cards first, then tops up with new words
+   if there is room. Reviews before new material, always — the cost of
+   forgetting something you already paid to learn is higher than the cost of
+   learning one fewer new word today.
    -------------------------------------------------------------------------- */
-function buildDeck() {
-  const pool = wordsForLevels(state.settings.levels);
 
-  // Most common first, across every selected level as one pool.
+/* The reading order for words you have not met yet: most common first, but
+   content words before grammar words (see FUNCTION_POS above). */
+function orderedPool(levels) {
+  const pool = wordsForLevels(levels).slice();
   pool.sort(function (a, b) { return a.freq - b.freq; });
 
-  // Content words before grammar words — see FUNCTION_POS above.
   const isGrammar = function (word) { return FUNCTION_POS.includes(word.pos); };
-  const ordered = pool.filter(function (w) { return !isGrammar(w); })
-                      .concat(pool.filter(isGrammar));
-
-  return ordered.slice(0, SESSION_SIZE).map(function (word) {
-    return { word: word, direction: directionFor() };
-  });
+  return pool.filter(function (w) { return !isGrammar(w); }).concat(pool.filter(isGrammar));
 }
 
-/* "Mixed" is decided per card, once, when the deck is built — not each time
-   the card renders. Deciding at render time would let a card flip direction
-   under you the moment anything else redrew the screen. */
-function directionFor() {
-  if (state.settings.direction === 'mixed') {
-    return Math.random() < 0.5 ? 'cn2en' : 'en2cn';
+/* Which directions are in play. "Mixed" genuinely means both — and since
+   progress is tracked per direction, a word can be due one way and not the
+   other. That is correct: you can lose the ability to produce a word while
+   still recognising it. */
+function activeDirections() {
+  if (state.settings.direction === 'mixed') return ['cn2en', 'en2cn'];
+  return [state.settings.direction];
+}
+
+function planSession() {
+  const pool = orderedPool(state.settings.levels);
+  const directions = activeDirections();
+  const mixed = state.settings.direction === 'mixed';
+  const now = today();
+
+  const due = [];
+  const fresh = [];
+
+  for (const word of pool) {
+    // A brand-new word under "mixed" is introduced in ONE direction, picked at
+    // random — not both at once. Meeting a word for the first time twice in
+    // the same session teaches nothing the second time.
+    const freshDirection = mixed
+      ? (Math.random() < 0.5 ? 'cn2en' : 'en2cn')
+      : directions[0];
+
+    for (const direction of directions) {
+      const record = state.progress[progressKey(word.id, direction)];
+
+      if (!record) {
+        if (direction === freshDirection) {
+          fresh.push({ word: word, direction: direction });
+        }
+      } else if (record.due <= now) {
+        // Dates are stored as YYYY-MM-DD, which sorts and compares correctly
+        // as plain text — no date parsing needed to ask "is this due yet?".
+        due.push({ word: word, direction: direction, record: record });
+      }
+      // else: waiting. Deliberately skipped.
+    }
   }
-  return state.settings.direction;
+
+  // Most overdue first; among equally overdue cards, the weakest box first,
+  // because those are the ones closest to being forgotten.
+  due.sort(function (a, b) {
+    if (a.record.due !== b.record.due) return a.record.due < b.record.due ? -1 : 1;
+    return a.record.box - b.record.box;
+  });
+
+  return { due: due, fresh: fresh };
+}
+
+function buildDeck() {
+  const plan = planSession();
+
+  const deck = [];
+  const usedWords = new Set();
+
+  // No word appears twice in one session, even under "mixed" where it could
+  // legitimately be due in both directions. Seeing 我 twice in twenty cards
+  // feels like a bug whether or not it is one.
+  function take(candidates) {
+    for (const candidate of candidates) {
+      if (deck.length >= SESSION_SIZE) return;
+      if (usedWords.has(candidate.word.id)) continue;
+
+      usedWords.add(candidate.word.id);
+      deck.push({ word: candidate.word, direction: candidate.direction });
+    }
+  }
+
+  take(plan.due);     // reviews first
+  take(plan.fresh);   // then new material, if there is room
+
+  return deck;
 }
 
 /* --------------------------------------------------------------------------
@@ -351,11 +424,11 @@ function render() {
 
 function renderHome() {
   const words = wordsForLevels(state.settings.levels);
+  const plan = planSession();
 
   // How many of the selected words you have studied at least once, in either
-  // direction. Counting distinct words rather than records, so a word you
-  // have drilled both ways counts once — that matches what "studied" means
-  // to a person.
+  // direction. Counting distinct words rather than records, so a word drilled
+  // both ways counts once — that matches what "studied" means to a person.
   const studied = new Set();
   for (const key of Object.keys(state.progress)) {
     studied.add(key.slice(0, key.lastIndexOf(':')));
@@ -363,14 +436,41 @@ function renderHome() {
   const studiedHere = words.filter(function (w) { return studied.has(w.id); }).length;
 
   // toLocaleString puts the thousands separator in: 3181 -> "3,181"
+  statDue.textContent     = plan.due.length.toLocaleString();
   statStudied.textContent = studiedHere.toLocaleString();
-  statWords.textContent = words.length.toLocaleString();
+  statWords.textContent   = words.length.toLocaleString();
 
-  // You cannot study nothing. Say why the button is dead rather than leaving
-  // someone to poke at it.
-  const none = state.settings.levels.length === 0;
-  document.body.classList.toggle('no-levels', none);
-  startBtn.disabled = none;
+  // What the next session would actually contain. Building the real deck
+  // rather than guessing means the button can never promise cards the session
+  // will not deliver.
+  const deck = buildDeck();
+  const reviews = deck.filter(function (item) {
+    return Boolean(state.progress[progressKey(item.word.id, item.direction)]);
+  }).length;
+  const introductions = deck.length - reviews;
+
+  startSub.textContent = describeDeck(reviews, introductions);
+
+  // Two reasons the button might be dead, and each says which one it is.
+  // A disabled control with no explanation is just a broken control.
+  let note = '';
+  if (state.settings.levels.length === 0) {
+    note = 'Choose at least one level.';
+  } else if (deck.length === 0) {
+    note = 'Nothing due, and no new words left at these levels. Come back tomorrow, or add a level.';
+  }
+
+  homeNote.textContent = note;
+  document.body.classList.toggle('cannot-start', note !== '');
+  startBtn.disabled = note !== '';
+}
+
+/* Say what the session is, rather than always claiming "20 cards". */
+function describeDeck(reviews, introductions) {
+  const parts = [];
+  if (reviews) parts.push(reviews + ' review' + (reviews === 1 ? '' : 's'));
+  if (introductions) parts.push(introductions + ' new');
+  return parts.length ? parts.join(' · ') : 'nothing due';
 }
 
 function renderStudy() {
@@ -557,8 +657,7 @@ function boot() {
 boot();
 
 /* --------------------------------------------------------------------------
-   NOT YET BUILT:
-   Progress is recorded, including each card's box and next-due date, but
-   nothing schedules by them yet — every session still starts from the top of
-   the list rather than from what is actually due (Slice 6).
+   STILL TO COME (Slice 7):
+   Keyboard shortcuts, a flip animation, and shorter prompts on EN → 中 cards,
+   where the full dictionary definition can be a mouthful.
    -------------------------------------------------------------------------- */
