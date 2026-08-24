@@ -256,7 +256,9 @@ body {
   gap: 7px;
 }
 .stat__n { font-size: 15px; font-weight: 500; color: var(--accent); }
+.stat__n--quiet { color: var(--text); }
 .stat__label { font-size: 13px; color: var(--text-dim); }
+.stat__dot { font-size: 13px; color: var(--line-strong); padding: 0 2px; }
 
 .view--home .eyebrow { margin-top: 28px; }
 

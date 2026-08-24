@@ -45,12 +45,157 @@ const ALL_LEVELS   = [1, 2, 3, 4];
    lists stay neutral so a future screen can order them differently. */
 const FUNCTION_POS = ['particle', 'preposition', 'conjunction'];
 
+
+/* --------------------------------------------------------------------------
+   SPACED-REPETITION BOXES
+
+   Written from this slice onward even though nothing schedules by them yet —
+   Slice 6 turns them into a review queue. Recording them now means that when
+   scheduling arrives, you already have real history instead of starting over.
+   -------------------------------------------------------------------------- */
+const BOX_DAYS = { 1: 1, 2: 3, 3: 7, 4: 21, 5: 60 };
+const MAX_BOX = 5;
+
+/* ==========================================================================
+   STORAGE
+
+   Everything the app remembers between visits lives in localStorage — a small
+   key/value store the browser keeps per site, on this device. No account, no
+   server, nothing leaves your machine.
+
+   Two separate keys, and the separation is the whole point:
+
+     vocapp.settings  — what you chose (levels, direction)
+     vocapp.progress  — what you have learned
+
+   The word lists are NOT stored. They ship with the app and are read-only.
+   That is what lets a corrected translation or a new HSK level be delivered
+   without touching a single thing you have learned. There is a test for
+   exactly this.
+   ========================================================================== */
+const KEY_SETTINGS = 'vocapp.settings';
+const KEY_PROGRESS = 'vocapp.progress';
+
+/* Stored data carries a version number from day one.
+
+   It costs one field today and saves a great deal later: the day the shape of
+   a progress record needs to change, this is what tells you whether the data
+   you just read is the old shape or the new one. Without it you are guessing
+   about data you can no longer reproduce. */
+const STORAGE_VERSION = 1;
+
+/* Every read and write is wrapped, because localStorage genuinely throws:
+   private browsing mode can refuse writes, a user can disable site data, and
+   storage can be full. None of those should take the app down — losing your
+   saved progress is bad, but a blank screen is worse. */
+function readStore(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+
+    const parsed = JSON.parse(raw);
+    if (!parsed || parsed.v !== STORAGE_VERSION) {
+      // A version we don't recognise. Today there is only one, so this can
+      // only mean corrupted or hand-edited data; ignore it rather than crash.
+      return fallback;
+    }
+    return parsed;
+  } catch (error) {
+    console.warn('Could not read ' + key + ':', error);
+    return fallback;
+  }
+}
+
+function writeStore(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(Object.assign({ v: STORAGE_VERSION }, value)));
+    return true;
+  } catch (error) {
+    console.warn('Could not save ' + key + ':', error);
+    return false;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   DATES
+
+   Deliberately NOT using toISOString(). That returns UTC, so for anyone west
+   of Greenwich it can report yesterday's date all evening — cards would come
+   due a day early or late depending on where you are and what time you study.
+   These build the date in your own timezone.
+   -------------------------------------------------------------------------- */
+function pad2(n) { return String(n).padStart(2, '0'); }
+
+function asDay(date) {
+  return date.getFullYear() + '-' + pad2(date.getMonth() + 1) + '-' + pad2(date.getDate());
+}
+
+function today() {
+  return asDay(new Date());
+}
+
+/* setDate() past the end of a month rolls into the next one on its own, so
+   this handles month and year boundaries without any special cases. */
+function addDays(day, days) {
+  const parts = day.split('-').map(Number);
+  const date = new Date(parts[0], parts[1] - 1, parts[2]);
+  date.setDate(date.getDate() + days);
+  return asDay(date);
+}
+
+/* --------------------------------------------------------------------------
+   PROGRESS RECORDS
+
+   One record per word PER DIRECTION. Recognising 喜欢 and producing it from
+   "to like" are separate things to know, so they are scored separately —
+   which is why the deck has carried a direction since Slice 4.
+   -------------------------------------------------------------------------- */
+function progressKey(wordId, direction) {
+  return wordId + ':' + direction;
+}
+
+function recordResult(wordId, direction, correct) {
+  const key = progressKey(wordId, direction);
+  const previous = state.progress[key];
+
+  const record = previous ? Object.assign({}, previous) : {
+    box: 1,
+    due: today(),
+    seen: 0,
+    correct: 0,
+    lastSeen: null,
+  };
+
+  record.seen += 1;
+  if (correct) record.correct += 1;
+  record.lastSeen = today();
+
+  // Leitner: a right answer moves the card up a box and pushes the next
+  // review further out; a wrong answer sends it straight back to box 1.
+  record.box = correct ? Math.min(record.box + 1, MAX_BOX) : 1;
+  record.due = addDays(today(), BOX_DAYS[record.box]);
+
+  state.progress[key] = record;
+}
+
+function saveProgress() {
+  writeStore(KEY_PROGRESS, { words: state.progress });
+}
+
+function saveSettings() {
+  writeStore(KEY_SETTINGS, {
+    levels: state.settings.levels,
+    direction: state.settings.direction,
+  });
+}
+
 /* --------------------------------------------------------------------------
    ELEMENTS
    -------------------------------------------------------------------------- */
 const levelsBox    = document.getElementById('levels');
 const directionBox = document.getElementById('direction');
 const statWords    = document.getElementById('statWords');
+const statStudied  = document.getElementById('statStudied');
 const startBtn     = document.getElementById('startBtn');
 
 const card         = document.getElementById('card');
@@ -91,6 +236,7 @@ const homeBtn      = document.getElementById('homeBtn');
 const state = {
   screen: 'home',                                // 'home' | 'study' | 'summary'
   settings: { levels: [1], direction: 'cn2en' }, // your choices
+  progress: {},                                  // everything you have learned
 
   deck: [],          // cards in this session
   index: 0,          // which one we're on
@@ -113,6 +259,26 @@ function readSettings() {
 
   const direction = directionBox.querySelector('input:checked');
   state.settings.direction = direction ? direction.value : 'cn2en';
+
+  saveSettings();
+}
+
+/* The reverse: put saved settings back INTO the form. The form stays the one
+   source of truth for what is selected, so restoring means ticking the real
+   boxes, not keeping a second copy of the answer somewhere. */
+function applySettings(settings) {
+  if (!settings) return;
+
+  if (Array.isArray(settings.levels)) {
+    for (const input of levelsBox.querySelectorAll('input')) {
+      input.checked = settings.levels.includes(Number(input.value));
+    }
+  }
+
+  if (settings.direction) {
+    const match = directionBox.querySelector('input[value="' + settings.direction + '"]');
+    if (match) match.checked = true;
+  }
 }
 
 function wordsForLevels(levels) {
@@ -184,10 +350,21 @@ function render() {
 }
 
 function renderHome() {
-  const available = wordsForLevels(state.settings.levels).length;
+  const words = wordsForLevels(state.settings.levels);
+
+  // How many of the selected words you have studied at least once, in either
+  // direction. Counting distinct words rather than records, so a word you
+  // have drilled both ways counts once — that matches what "studied" means
+  // to a person.
+  const studied = new Set();
+  for (const key of Object.keys(state.progress)) {
+    studied.add(key.slice(0, key.lastIndexOf(':')));
+  }
+  const studiedHere = words.filter(function (w) { return studied.has(w.id); }).length;
 
   // toLocaleString puts the thousands separator in: 3181 -> "3,181"
-  statWords.textContent = available.toLocaleString();
+  statStudied.textContent = studiedHere.toLocaleString();
+  statWords.textContent = words.length.toLocaleString();
 
   // You cannot study nothing. Say why the button is dead rather than leaving
   // someone to poke at it.
@@ -299,6 +476,12 @@ function grade(correct) {
   if (!item) return;
 
   state.results.push({ word: item.word, direction: item.direction, correct: correct });
+
+  // Save after every card, not at the end of the session. Close the tab
+  // halfway through and the cards you already graded are still recorded.
+  recordResult(item.word.id, item.direction, correct);
+  saveProgress();
+
   state.index += 1;
   state.revealed = false;
 
@@ -360,6 +543,13 @@ function boot() {
     return;
   }
 
+  // Load what was saved last time, before the form is read.
+  const savedProgress = readStore(KEY_PROGRESS, null);
+  state.progress = (savedProgress && savedProgress.words) || {};
+
+  const savedSettings = readStore(KEY_SETTINGS, null);
+  applySettings(savedSettings);
+
   readSettings();
   goHome();
 }
@@ -368,7 +558,7 @@ boot();
 
 /* --------------------------------------------------------------------------
    NOT YET BUILT:
-   Nothing is remembered when you close the tab — your levels, your direction
-   and everything you have learned reset (Slice 5). Every session starts from
-   the same words because there is no scheduling yet (Slice 6).
+   Progress is recorded, including each card's box and next-due date, but
+   nothing schedules by them yet — every session still starts from the top of
+   the list rather than from what is actually due (Slice 6).
    -------------------------------------------------------------------------- */
