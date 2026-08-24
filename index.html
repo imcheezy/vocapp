@@ -6,6 +6,23 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark light">
   <title>生词 — HSK Flashcards</title>
+  <meta name="description" content="Spaced-repetition flashcards for HSK 3.0 vocabulary, levels 1-4.">
+
+  <!--
+    Home-screen support. On a phone, "Add to Home Screen" then launches this
+    like an app: its own icon, no browser chrome, correct colours behind the
+    status bar. The manifest is only read over http(s) — opening the file
+    directly still works, it just looks like an ordinary web page.
+  -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon-192.png" sizes="192x192">
+  <link rel="apple-touch-icon" href="icon-180.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="生词">
+
+  <!-- Paints the browser/status bar to match the page, in each theme. -->
+  <meta name="theme-color" content="#12131a" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#f4f4f2" media="(prefers-color-scheme: light)">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

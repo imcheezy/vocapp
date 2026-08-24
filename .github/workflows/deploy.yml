@@ -1,0 +1,53 @@
+# Publishes the app to GitHub Pages.
+#
+# "Deploying" here means something very small: copy these files onto a web
+# server that GitHub runs, and hand back a URL. There is nothing to build and
+# no server-side code — the whole app is the files in this repository.
+#
+# Runs on every push to main. It can also be run by hand from the Actions tab
+# ("Run workflow"), which is useful the first time.
+#
+# Before the first run, Pages must be switched on once:
+#   Settings -> Pages -> Build and deployment -> Source: "GitHub Actions"
+
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# The permissions this job needs, and no more.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# If two pushes land close together, let the first finish rather than
+# cancelling it — a half-finished deploy is worse than a slightly stale one.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Package the site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -67,6 +67,35 @@ On a laptop, studying is faster without the mouse:
 Arrow keys only work once the answer is showing — grading a card you have not
 looked at is just cheating.
 
+## Putting it on the internet
+
+The app is a folder of files, so "deploying" means: copy them onto a web
+server and get a URL back. There is nothing to build and no server-side code.
+
+`.github/workflows/deploy.yml` does this with GitHub Pages on every push to
+`main`. Before the first run, switch Pages on once:
+
+**Settings → Pages → Build and deployment → Source: "GitHub Actions"**
+
+Then merge to `main` (or use the Actions tab → Deploy to GitHub Pages → Run
+workflow). The URL appears in the workflow output and under Settings → Pages.
+
+> **GitHub Pages on a private repository requires a paid plan.** On a free
+> account the repository has to be public for Pages to serve it. If you would
+> rather keep it private, any static host with a free tier works the same way —
+> the files are the whole app.
+
+Whoever has the URL can open the app. That exposes no personal data: study
+progress lives in each visitor's own browser, never on the server.
+
+### On your phone
+
+Open the URL, then **Add to Home Screen**. It launches with its own icon and
+no browser chrome, because of `manifest.json` and the icons beside it.
+
+Remember that progress is per-device: your phone and your laptop keep separate
+records.
+
 ## Tests
 
 The app itself has no dependencies. The tests do: they drive a real browser.
@@ -78,18 +107,22 @@ node tests/run.mjs
 
 Or run one area at a time, e.g. `node tests/scheduling.test.mjs`.
 
-157 assertions across five files, run over `file://` — the same way the app is
-actually opened, so the tests would catch the class of problem that made the
-word lists `.js` instead of `.json` in the first place.
+178 assertions across six files.
+
+Most files drive the app over `file://` — the same way it is opened locally —
+so they would catch the class of problem that made the word lists `.js` rather
+than `.json`. `served.test.mjs` covers the other half, starting a small server
+so the manifest, icons and home-screen metadata can be checked the way they
+will actually be delivered.
 
 ## Status
 
-Slice 7 of 8: a working spaced-repetition study tool. Choose your levels
+Complete — slice 8 of 8: a working spaced-repetition study tool. Choose your levels
 (HSK 1–4) and direction (中 → EN, EN → 中, or mixed); each session serves the
 cards that are actually due, tops up with new words, and remembers everything
 between visits.
 
-Only deployment remains.
+Deployment is configured and waiting on the one settings change above.
 
 Word order within a session puts content words before grammar words. The
 most frequent Chinese words are overwhelmingly grammatical (的, 了, 着), and
