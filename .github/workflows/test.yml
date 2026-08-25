@@ -1,0 +1,66 @@
+# Runs the browser tests on every pull request and every push to main.
+#
+# Why this exists: without it, the tests only run when somebody remembers to
+# run them, which is how a test suite quietly stops being true. A check that
+# runs on its own is worth more than a better suite that doesn't.
+#
+# This does NOT gate deployment on its own. To require it, add a branch
+# protection rule on main (Settings -> Branches) requiring "tests" to pass.
+
+name: Tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# A new push to the same branch makes the previous run irrelevant, so cancel
+# it. The opposite of the deploy workflow, where a half-finished run matters.
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: tests
+    runs-on: ubuntu-latest
+    # Generous on purpose. The suite takes several minutes locally and CI
+    # runners are slower; a job killed by its own timeout looks exactly like a
+    # real failure and wastes an afternoon. Public repos get free Actions
+    # minutes, so the headroom costs nothing.
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # `npm ci` installs exactly what package-lock.json pins, and fails rather
+      # than quietly resolving something newer. That is the difference between
+      # a run you can trust and one that passed for reasons you cannot see.
+      - name: Install dependencies
+        run: npm ci
+
+      # Playwright needs the browser itself plus its system libraries, which
+      # are not on the runner by default.
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run the tests
+        run: npm test
+
+      # Screenshots are only useful when something went wrong, so they are
+      # kept on failure and thrown away otherwise.
+      - name: Keep screenshots from a failed run
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: tests/screenshots/
+          retention-days: 7
+          if-no-files-found: ignore

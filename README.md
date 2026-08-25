@@ -128,13 +128,19 @@ records.
 The app itself has no dependencies. The tests do: they drive a real browser.
 
 ```
-npm install -D playwright
-node tests/run.mjs
+npm ci
+npx playwright install chromium
+npm test
 ```
 
 Or run one area at a time, e.g. `node tests/scheduling.test.mjs`.
 
-207 assertions across seven files.
+207 assertions across seven files. They also run automatically on every pull
+request and every push to `main` — see `.github/workflows/test.yml`.
+
+`package.json` exists only to pin Playwright for the tests. **The app itself
+still has no dependencies**: `index.html` opens in a browser with nothing
+installed, and nothing from `node_modules` is ever served.
 
 Most files drive the app over `file://` — the same way it is opened locally —
 so they would catch the class of problem that made the word lists `.js` rather
