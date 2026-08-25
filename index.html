@@ -58,6 +58,23 @@
         <span class="stat__label">selected</span>
       </p>
 
+      <!-- Only appears once there is something worth revising. -->
+      <div class="export" id="exportRow" hidden>
+        <p class="export__text">
+          <span class="export__n" id="weakCount">0</span>
+          <span class="export__label">words to revise</span>
+        </p>
+        <div class="export__actions">
+          <button class="btn-small" id="downloadWeakBtn" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"></path><polyline points="7 11 12 16 17 11"></polyline><path d="M4 20h16"></path></svg>
+            CSV
+          </button>
+          <button class="btn-small btn-small--quiet" id="copyWeakBtn" type="button">Copy</button>
+        </div>
+      </div>
+
+      <p class="export__status" id="exportStatus" role="status"></p>
+
       <p class="eyebrow">LEVELS</p>
 
       <!--
@@ -206,6 +223,11 @@
         </div>
         <!-- Filled in by app.js. A <ul> because it genuinely is a list. -->
         <ul class="missed" id="missedList"></ul>
+
+        <button class="btn-small btn-small--quiet" id="downloadSessionBtn" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"></path><polyline points="7 11 12 16 17 11"></polyline><path d="M4 20h16"></path></svg>
+          Download these
+        </button>
       </div>
 
       <p class="perfect" id="perfect">Nothing missed. 很好.</p>

@@ -54,6 +54,33 @@ development — 个 was nearly shipped as `gě`, and 了 as `liǎo`.
 looks off against your textbook, it probably is. Fixes go in the `OVERRIDES`
 or `DEFINITIONS` tables in `tools/build-data.py`, so they survive a rebuild.
 
+## Exporting words to revise
+
+The home screen offers a CSV of the words you keep getting wrong, so you can
+print them, paste them into a spreadsheet, or work through them away from a
+screen. The summary screen exports just that session's misses.
+
+A word counts as "to revise" if **either**:
+
+- it is still in **box 1 or 2** — recent answers have been wrong; or
+- you have seen it **at least 3 times** and get it right **less than 60%** of
+  the time.
+
+The second rule exists to catch a specific failure the first one misses: a
+word you answer correctly just often enough to keep climbing the boxes, then
+miss again. Its box hovers in the middle forever, so a box test alone would
+never flag it — yet it is exactly the word eating your study time.
+
+Rows are ordered weakest first, and cover the levels currently selected. The
+two study directions appear as separate rows, because they are separate things
+to know.
+
+The file opens cleanly in Excel, Numbers and Google Sheets — it is written
+with a byte-order mark, without which Excel on Windows renders every Chinese
+character as mojibake. If your browser blocks the download (iOS sometimes
+does), **Copy** puts the same rows on the clipboard to paste straight into a
+spreadsheet.
+
 ## Keyboard shortcuts
 
 On a laptop, studying is faster without the mouse:
@@ -107,7 +134,7 @@ node tests/run.mjs
 
 Or run one area at a time, e.g. `node tests/scheduling.test.mjs`.
 
-178 assertions across six files.
+207 assertions across seven files.
 
 Most files drive the app over `file://` — the same way it is opened locally —
 so they would catch the class of problem that made the word lists `.js` rather
