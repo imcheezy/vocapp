@@ -9,7 +9,7 @@ const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, de
 const page = await ctx.newPage();
 const errors = [];
 page.on('pageerror', e => errors.push('JS ERROR: ' + e.message));
-await page.goto('file:///home/user/vocapp/index.html');
+await page.goto(APP);
 await page.waitForTimeout(1500);
 const level = v => page.locator(`.level:has(input[value="${v}"])`);
 const dir   = v => page.locator(`.seg:has(input[value="${v}"])`);

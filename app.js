@@ -200,6 +200,12 @@ const statDue      = document.getElementById('statDue');
 const homeNote     = document.getElementById('homeNote');
 const startSub     = document.getElementById('startSub');
 const resetBtn     = document.getElementById('resetBtn');
+const exportRow    = document.getElementById('exportRow');
+const weakCount    = document.getElementById('weakCount');
+const exportStatus = document.getElementById('exportStatus');
+const downloadWeakBtn = document.getElementById('downloadWeakBtn');
+const copyWeakBtn     = document.getElementById('copyWeakBtn');
+const downloadSessionBtn = document.getElementById('downloadSessionBtn');
 const startBtn     = document.getElementById('startBtn');
 
 const card         = document.getElementById('card');
@@ -402,6 +408,210 @@ function buildDeck() {
   return deck;
 }
 
+
+/* ==========================================================================
+   EXPORT
+
+   What is worth exporting is not "the words I missed today" — you missed 我
+   this morning because you were tired, and you will get it tomorrow. What is
+   worth writing on a revision sheet is the set of words you keep missing
+   ACROSS sessions.
+
+   The app already knows which those are, because that is exactly what a low
+   Leitner box means. So the export answers the better question.
+   ========================================================================== */
+
+/* A card counts as struggling if EITHER is true:
+
+     - it is still in box 1 or 2, meaning recent answers have been wrong or it
+       has barely been seen since the last mistake; or
+     - you have seen it enough times to judge, and get it wrong more often
+       than not.
+
+   The second rule catches a specific failure the first one misses: a word you
+   answer right just often enough to keep climbing, then miss, over and over.
+   Its box oscillates around the middle, so a box test alone would never flag
+   it — but it is precisely the word eating your study time. */
+const WEAK_BOX = 2;
+const WEAK_ACCURACY = 0.6;
+const WEAK_MIN_SEEN = 3;
+
+function isStruggling(record) {
+  if (record.box <= WEAK_BOX) return true;
+  if (record.seen >= WEAK_MIN_SEEN && (record.correct / record.seen) < WEAK_ACCURACY) return true;
+  return false;
+}
+
+/* Every struggling card in the levels currently selected, weakest first.
+   Scoped to the selection so it agrees with the counts beside it — a number on
+   the home screen that quietly means something different from the one next to
+   it is worse than no number. */
+function strugglingCards() {
+  const words = new Map();
+  for (const word of wordsForLevels(state.settings.levels)) {
+    words.set(word.id, word);
+  }
+
+  const rows = [];
+  for (const key of Object.keys(state.progress)) {
+    const record = state.progress[key];
+    if (!isStruggling(record)) continue;
+
+    const split = key.lastIndexOf(':');
+    const word = words.get(key.slice(0, split));
+    if (!word) continue;   // studied, but not in the selected levels
+
+    rows.push({ word: word, direction: key.slice(split + 1), record: record });
+  }
+
+  rows.sort(function (a, b) {
+    if (a.record.box !== b.record.box) return a.record.box - b.record.box;
+    const accuracyA = a.record.seen ? a.record.correct / a.record.seen : 0;
+    const accuracyB = b.record.seen ? b.record.correct / b.record.seen : 0;
+    if (accuracyA !== accuracyB) return accuracyA - accuracyB;
+    return b.record.seen - a.record.seen;
+  });
+
+  return rows;
+}
+
+const DIRECTION_NAMES = {
+  cn2en: 'Chinese \u2192 English',
+  en2cn: 'English \u2192 Chinese',
+};
+
+/* One CSV field.
+
+   Any field can contain a comma (definitions are full of them), a quote, or a
+   newline. The rule is: wrap it in quotes, and double any quote inside. Get
+   this wrong and a single definition silently shifts every later column in
+   that row — the kind of corruption you only notice weeks later in a
+   spreadsheet you already trusted. */
+function csvField(value) {
+  const text = value === null || value === undefined ? '' : String(value);
+  return '"' + text.replace(/"/g, '""') + '"';
+}
+
+function csvRows(rows) {
+  const header = ['Hanzi', 'Pinyin', 'English', 'Part of speech', 'HSK level',
+                  'Direction', 'Box', 'Times seen', 'Times correct', 'Accuracy',
+                  'Last seen', 'Next due'];
+
+  const body = rows.map(function (row) {
+    const record = row.record;
+    const accuracy = record.seen ? Math.round(record.correct / record.seen * 100) + '%' : '';
+
+    return [
+      row.word.hanzi,
+      row.word.pinyin,
+      row.word.english,
+      row.word.pos,
+      row.word.level,
+      DIRECTION_NAMES[row.direction] || row.direction,
+      record.box,
+      record.seen,
+      record.correct,
+      accuracy,
+      record.lastSeen || '',
+      record.due || '',
+    ].map(csvField).join(',');
+  });
+
+  return [header.map(csvField).join(',')].concat(body).join('\r\n');
+}
+
+/* Save text as a file.
+
+   The BOM matters. Excel on Windows assumes a CSV is in the local legacy
+   encoding unless the file opens with a byte-order mark, so without it every
+   Chinese character arrives as mojibake. Three invisible characters are the
+   difference between a usable revision sheet and a screen of question marks.
+
+   Returns false when the browser refuses — iOS in particular does not always
+   allow a page to start a download — so the caller can offer the clipboard
+   instead rather than leaving a button that appears to do nothing. */
+function downloadText(filename, text) {
+  try {
+    const blob = new Blob(['\uFEFF' + text], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.style.display = 'none';
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    // Give the browser a moment to start reading the blob before releasing it.
+    setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+    return true;
+  } catch (error) {
+    console.warn('Download failed:', error);
+    return false;
+  }
+}
+
+function say(message) {
+  exportStatus.textContent = message;
+}
+
+function exportFilename(kind) {
+  return 'hsk-' + kind + '-' + today() + '.csv';
+}
+
+function exportStruggling() {
+  const rows = strugglingCards();
+  if (rows.length === 0) return;
+
+  const filename = exportFilename('revise');
+  if (downloadText(filename, csvRows(rows))) {
+    say('Saved ' + filename + ' — ' + rows.length + ' word' + (rows.length === 1 ? '' : 's') + '.');
+  } else {
+    say('Your browser blocked the download. Try Copy instead.');
+  }
+}
+
+/* The clipboard is the fallback for browsers that will not start a download,
+   which on a phone is most of the interesting ones. */
+function copyStruggling() {
+  const rows = strugglingCards();
+  if (rows.length === 0) return;
+
+  const text = csvRows(rows);
+
+  if (!navigator.clipboard || !navigator.clipboard.writeText) {
+    say('This browser will not let a page copy for you. Use CSV instead.');
+    return;
+  }
+
+  navigator.clipboard.writeText(text).then(function () {
+    say('Copied ' + rows.length + ' row' + (rows.length === 1 ? '' : 's') + ' — paste into a spreadsheet.');
+  }).catch(function (error) {
+    console.warn('Clipboard failed:', error);
+    say('Copying was blocked. Use CSV instead.');
+  });
+}
+
+/* The summary screen exports just this session's misses, since that is what
+   is on screen there. Same builder, different rows. */
+function exportSessionMisses() {
+  const rows = state.results
+    .filter(function (result) { return !result.correct; })
+    .map(function (result) {
+      const key = progressKey(result.word.id, result.direction);
+      return {
+        word: result.word,
+        direction: result.direction,
+        record: state.progress[key] || { box: 1, seen: 0, correct: 0, lastSeen: '', due: '' },
+      };
+    });
+
+  if (rows.length === 0) return;
+  downloadText(exportFilename('session'), csvRows(rows));
+}
+
 /* --------------------------------------------------------------------------
    RENDER — THE ONE FUNCTION THAT TOUCHES THE SCREEN
 
@@ -467,6 +677,10 @@ function renderHome() {
 
   // Nothing to reset when nothing has been learned.
   resetBtn.hidden = Object.keys(state.progress).length === 0;
+
+  const struggling = strugglingCards();
+  weakCount.textContent = struggling.length.toLocaleString();
+  exportRow.hidden = struggling.length === 0;
 }
 
 /* Shorten a definition down to a usable prompt for EN → 中 cards.
@@ -557,6 +771,8 @@ function renderSummary() {
   for (const result of missed) {
     missedList.appendChild(missedRow(result.word));
   }
+
+  downloadSessionBtn.hidden = missed.length === 0;
 }
 
 /* Build one row of the "review these" list.
@@ -638,6 +854,7 @@ function startSession() {
 }
 
 function goHome() {
+  say('');
   state.screen = 'home';
   state.revealed = false;
   document.body.classList.remove('is-revealed', 'dir-en2cn');
@@ -712,6 +929,9 @@ gotBtn.addEventListener('click', function () { grade(true); });
 againBtn.addEventListener('click', startSession);
 homeBtn.addEventListener('click', goHome);
 resetBtn.addEventListener('click', resetProgress);
+downloadWeakBtn.addEventListener('click', exportStruggling);
+copyWeakBtn.addEventListener('click', copyStruggling);
+downloadSessionBtn.addEventListener('click', exportSessionMisses);
 
 /* --------------------------------------------------------------------------
    START
@@ -743,6 +963,8 @@ function boot() {
 boot();
 
 /* --------------------------------------------------------------------------
-   STILL TO COME (Slice 8):
-   Deployment — putting this at a real URL so it works on a phone.
+   NOT BUILT (and deliberately so):
+   Audio, tone drilling, importing your own word list, and syncing between
+   devices. The first three are small; the last one needs accounts and a
+   server, which is the trade this app was designed to avoid.
    -------------------------------------------------------------------------- */

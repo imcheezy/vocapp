@@ -387,6 +387,70 @@ body.cannot-start .warn { display: block; }
 }
 
 /* --------------------------------------------------------------------------
+   5a2. EXPORT
+   -------------------------------------------------------------------------- */
+.export {
+  margin-top: 10px;
+  padding: 12px 14px 12px 16px;
+  background: var(--surface-dim);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-ctl);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.export[hidden] { display: none; }   /* [hidden] loses to display:flex without this */
+
+.export__text { flex-grow: 1; display: flex; align-items: baseline; gap: 7px; }
+.export__n { font-size: 15px; font-weight: 500; color: var(--warn); }
+.export__label { font-size: 13px; color: var(--text-dim); }
+.export__actions { display: flex; gap: 8px; }
+
+.export__status {
+  font-size: 12px;
+  color: var(--text-faint);
+  min-height: 17px;      /* reserve the line so nothing shifts when it fills */
+  padding: 5px 2px 0;
+}
+
+/* A small secondary button. 44px tall even though it looks slim — the visible
+   box can be smaller than the touch target, and the target is what matters. */
+.btn-small {
+  min-height: 44px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  background: var(--surface-raise);
+  border: 1px solid var(--line-strong);
+  border-radius: 9px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  cursor: pointer;
+}
+.btn-small svg {
+  width: 15px; height: 15px;
+  fill: none; stroke: currentColor; stroke-width: 1.9;
+  stroke-linecap: round; stroke-linejoin: round;
+}
+.btn-small:hover { border-color: var(--accent); }
+.btn-small:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.btn-small--quiet {
+  background: transparent;
+  border-color: var(--line);
+  color: var(--text-dim);
+  font-weight: 400;
+}
+
+/* On the summary screen it sits under the missed list, aligned left. */
+#downloadSessionBtn { align-self: flex-start; margin-top: 4px; }
+
+/* --------------------------------------------------------------------------
    5b. THE SUMMARY SCREEN
    -------------------------------------------------------------------------- */
 .view--summary { padding-top: 24px; }

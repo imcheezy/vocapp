@@ -1,0 +1,12 @@
+{
+  "name": "vocapp",
+  "version": "1.0.0",
+  "private": true,
+  "description": "生词 — spaced-repetition flashcards for HSK 3.0 vocabulary. The app itself has no dependencies; Playwright below is for running the tests only.",
+  "scripts": {
+    "test": "node tests/run.mjs"
+  },
+  "devDependencies": {
+    "playwright": "1.56.1"
+  }
+}
